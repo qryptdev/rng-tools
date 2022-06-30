@@ -878,7 +878,8 @@ static void do_loop(int random_step)
 
 continue_trying:
 	for (no_work = 0; no_work < 100; no_work = (work_done ? 0 : no_work+1)) {
-
+		bool consider_delay = false;
+		unsigned int sources_tried = 0;
 		work_done = false;
 
 		/*
@@ -911,10 +912,16 @@ continue_trying:
 				continue;	/* failed, no work */
 
 			message(LOG_DAEMON|LOG_DEBUG, "Reading entropy from %s\n", iter->rng_name);
+			sources_tried++;
 
 			retval = iter->xread(buf, sizeof buf, iter);
 			if (retval)
+			{
+				if (iter->rng_options == qrypt_options)
+					consider_delay = true;
+
 				continue;	/* failed, no work */
+			}
 
 			work_done = true;
 
@@ -944,6 +951,13 @@ continue_trying:
 					iter->close(iter);
 				iter->disabled = true;
 			}
+		}
+
+		/* Don't hog the CPU if the only available source is the Qrypt
+		   source and it is not returning any data, e.g. due to network
+		   unavailability. */
+		if (!work_done && sources_tried == 1 && consider_delay) {
+			sleep(1);
 		}
 	}
 
