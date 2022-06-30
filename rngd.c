@@ -950,12 +950,13 @@ continue_trying:
 	/*
 	 * No entropy source produced entropy in
 	 * 100 rounds, disable anything that isn't
-	 * flagged as a slow source
+	 * flagged as a slow source (this check is
+	 * skipped for the Qrypt source)
 	 */
 	sources_left = 0;
 	for (i = 0; i < ENT_MAX; ++i) {
 		iter = &entropy_sources[i];
-		if (!iter->flags.slow_source && !iter->disabled) {
+		if (!iter->flags.slow_source && !iter->disabled && iter->rng_options != qrypt_options) {
 			message(LOG_DAEMON|LOG_WARNING, "Too Slow: Disabling %s\n",
 				iter->rng_name);
 			iter->disabled = 1;
